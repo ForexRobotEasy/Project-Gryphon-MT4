@@ -1,0 +1,80 @@
+
+//+------------------------------------------------------------------+
+//|                                                 Project Gryphon MT4|
+//|                                        Developer: Forex Robot Easy Team|
+//|                                                 www.forexroboteasy.com|
+//+------------------------------------------------------------------+
+
+// Medium-Term Trading Strategy
+// Implementing a medium-term trading strategy based on wave movement theory
+
+//+------------------------------------------------------------------+
+//|                        Expert Advisor Parameters                  |
+//+------------------------------------------------------------------+
+input double TakeProfit=50; // Take profit level in pips
+input double StopLoss=30; // Stop loss level in pips
+input double LotSize=0.1; // Position size
+
+//+------------------------------------------------------------------+
+//|                        Expert Advisor Start Function              |
+//+------------------------------------------------------------------+
+int start()
+{
+   // Wave Movement Analysis
+   double currentPrice = MarketInfo(Symbol(), MODE_BID);
+   double previousPrice = iClose(Symbol(), PERIOD_M5, 1);
+   double nextPrice = iClose(Symbol(), PERIOD_M5, 2);
+
+   // Historical Data Analysis
+   double previousHigh = iHigh(Symbol(), PERIOD_D1, 1);
+   double previousLow = iLow(Symbol(), PERIOD_D1, 1);
+
+   // Position Opening
+   if(currentPrice > previousPrice && currentPrice > previousHigh)
+   {
+      // Calculate position size based on available equity
+      double equity = AccountBalance() + AccountProfit();
+      double positionSize = equity * LotSize;
+
+      // Open a buy position
+      OrderSend(Symbol(), OP_BUY, positionSize, currentPrice, 0, currentPrice - StopLoss * Point, currentPrice + TakeProfit * Point, 'Project Gryphon MT4', MagicNumber());
+   }
+   else if(currentPrice < previousPrice && currentPrice < previousLow)
+   {
+      // Calculate position size based on available equity
+      double equity = AccountBalance() + AccountProfit();
+      double positionSize = equity * LotSize;
+
+      // Open a sell position
+      OrderSend(Symbol(), OP_SELL, positionSize, currentPrice, 0, currentPrice + StopLoss * Point, currentPrice - TakeProfit * Point, 'Project Gryphon MT4', MagicNumber());
+   }
+
+   // Position Closing
+   for(int i=OrdersTotal()-1; i>=0; i--)
+   {
+      if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
+      {
+         if(OrderMagicNumber() == MagicNumber())
+         {
+            if(OrderType() == OP_BUY)
+            {
+               // Close buy position if price reaches take profit level or trend changes
+               if(currentPrice >= OrderOpenPrice() + TakeProfit * Point || currentPrice < nextPrice)
+               {
+                  OrderClose(OrderTicket(), OrderLots(), currentPrice, 0, clrNone);
+               }
+            }
+            else if(OrderType() == OP_SELL)
+            {
+               // Close sell position if price reaches take profit level or trend changes
+               if(currentPrice <= OrderOpenPrice() - TakeProfit * Point || currentPrice > nextPrice)
+               {
+                  OrderClose(OrderTicket(), OrderLots(), currentPrice, 0, clrNone);
+               }
+            }
+         }
+      }
+   }
+
+   return(0);
+}
